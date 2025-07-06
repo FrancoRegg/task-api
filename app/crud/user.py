@@ -5,7 +5,7 @@ from app.utils.security import hash_password
 
 
 def get_user_by_email(db: Session, email: str):
-    return db.session.query(User).filter_by(User.email == email).first()
+    return db.query(User).filter(User.email == email).first()
 
 
 def create_user(db: Session, user: UserCreate):
