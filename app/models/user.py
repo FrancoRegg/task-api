@@ -7,5 +7,5 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(50), nullable=False, unique=True, index=True)
-    hashed_password = Column(String(50), nullable=False)
+    hashed_password = Column(String(120), nullable=False)
     created_at = Column(DateTime(timezone=True))
