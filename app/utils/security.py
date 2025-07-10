@@ -1,9 +1,9 @@
 from passlib.context import CryptContext
+from datetime import datetime, timedelta, timezone
 import jwt
-from datetime import datetime, timedelta
-from app.schemas.token import TokenData
-from app.core.config import Settings
 from jwt import PyJWTError
+from app.core.config import settings
+from app.schemas.token import TokenData
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -18,21 +18,25 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
-    expire = datetime.now(datetime.timezone.utc) + \
-        timedelta(minutes=Settings.access_token_expire_minutes)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(
-        to_encode, Settings.secret_key, algorithm=Settings.algorithm)
-    return encoded_jwt
+    expire = datetime.utcnow().replace(tzinfo=timezone.utc) + \
+        timedelta(minutes=settings.access_token_expire_minutes)
+    to_encode["exp"] = expire
+    if "sub" not in to_encode:
+        to_encode["sub"] = data.get("sub")
+    # Use settings for key and algorithm
+    token = jwt.encode(to_encode, settings.secret_key,
+                       algorithm=settings.algorithm)
+    return token
 
 
 def verify_access_token(token: str) -> TokenData:
     try:
-        payload = jwt.decode(token, Settings.secret_key,
-                             algorithms=[Settings.algorithm])
-        email: str = payload.get("sub")
-        if email is None:
+        payload = jwt.decode(token, settings.secret_key,
+                             algorithms=[settings.algorithm])
+        email = payload.get("sub")
+        if not email:
             raise ValueError("Token inválido: no contiene sujeto")
         return TokenData(email=email)
     except PyJWTError as e:
+        # Provide consistent exception type
         raise ValueError(f"Token inválido: {e}")
